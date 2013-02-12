@@ -1,0 +1,12 @@
+{application, spawnpool,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { spawnpool_app, []}},
+  {env, []}
+ ]}.

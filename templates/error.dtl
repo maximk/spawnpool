@@ -1,0 +1,14 @@
+<html>
+<body>
+
+<p>Error occured while spawning a new instance:</p>
+
+<pre>
+{{ error }}
+</pre>
+
+<p>The service is limited to {{ max_inst }} instances max. You may try again
+later.</p>
+
+</body>
+</html>
