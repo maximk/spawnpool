@@ -26,8 +26,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--export([create/0,destroy/1]).
--export([info/1]).
+-export([create/1,destroy/1]).
 
 %% ------------------------------------------------------------------
 %% API Function Definitions
@@ -37,21 +36,16 @@ start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 %% @doc Starts a new instance.
--spec create() -> {ok,id()} | {error,_}.
+-spec create(_) -> {ok,id()} | {error,_}.
 
-create() ->
-	gen_server:call(?SERVER, create, infinity).
+create(Vars) ->
+	gen_server:call(?SERVER, {create,Vars}, infinity).
 
 %% @doc Destroys an instance.
 -spec destroy(id()) -> ok | {error,_}.
 
 destroy(Id) ->
 	gen_server:call(?SERVER, {destroy,Id}, infinity).
-
-%% @doc Retrieves various info.
--spec info(atom()) -> any().
-
-info(max_inst) -> ?MAX_ZERGLINGS.
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
@@ -68,41 +62,19 @@ init([]) ->
 	Available = [{A,B,C,D +N} || N <- lists:seq(0, ?MAX_ZERGLINGS -1)],
 	{ok,#st{connection=Conn,running =[],pending=[],available =Available}}.
 
-handle_call(create, _From, #st{available =[]} =St) ->
+handle_call({create,_Vars}, _From, #st{available =[]} =St) ->
 	{reply,{error,at_max_capacity},St};
 
-handle_call(create, From, #st{connection =Conn,available =[Addr|Avail]} =St) ->
-	spawn(fun() ->
-		case do_create(Conn, Addr) of
-		{ok,Name} ->
-			gen_server:cast(?SERVER, {created,{Name,Addr},From});
-		{error,Reason} ->
-			gen_server:cast(?SERVER, {create_error,{Reason,Addr},From})
-		end
-	end),
-	{noreply,St#st{available =Avail}};
-
-handle_call({destroy,Id}, _From, #st{connection =Conn,available =Avail,running =Run} =St) ->
-	case lists:keyfind(Id, 1, Run) of
-	{Id,Addr} ->
-		case do_destroy(Conn, Id) of
-		ok ->
-			{reply,ok,St#st{running =lists:keydelete(Id, 1, Run),
-							available =[Addr|Avail]}};
-		{error,_} =Error ->
-			{reply,Error,St}
-		end;
-	false ->
-		{reply,{error,not_found},St}
+handle_call({create,Vars}, From, #st{connection =Conn,
+							  available =[Addr|Avail],
+							  pending =Pend} =St) ->
+	case do_create(Conn, Addr, Vars) of
+	{ok,Name} ->
+		{noreply,St#st{available =Avail,
+					   pending =[{Name,Addr,From}|Pend]}};
+	{error,Reason} ->
+		{reply,{error,Reason},St}
 	end.
-
-handle_cast({created,{Name,Addr} =NA,From}, #st{pending =Pend} =St) ->
-	gen_server:reply(From, {ok,NA}),
-	{noreply,St#st{pending =[{Name,Addr,From}|Pend]}};
-
-handle_cast({create_errorr,{Reason,Addr},From}, #st{available =Avail} =St) ->
-	gen_server:reply(From, {error,Reason}),
-	{noreply,St#st{available =[Addr|Avail]}};
 
 handle_cast({ready,{A,B,C,D} =Addr}, #st{pending =Pend,running =Run} =St) ->
 	io:format("zergling at ~w.~w.~w.~w reports on duty~n", [A,B,C,D]),
@@ -125,32 +97,27 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-do_create(Conn, Addr) ->
-	{ok,ConfigXml} = build_config(Addr),
+do_create(Conn, Addr, OtherVars) ->
+	{ok,ConfigXml} = build_config(Addr, OtherVars),
 
     {ok, [Domain]} = verx:domain_define_xml(Conn, [ConfigXml]),
     ok = verx:domain_create(Conn, [Domain]),
 	{Name,_,_} = Domain,
     {ok,Name}.
 
-build_config(Addr) ->
-	build_config(Addr, 32).
+build_config(Addr, OtherVars) ->
+	build_config(Addr, OtherVars, 32).
 
-build_config({A,B,C,D}, Memory) ->
+build_config({A,B,C,D}, OtherVars, Memory) ->
 	IpAddr = io_lib:format("~w.~w.~w.~w", [A,B,C,D]),
 	Name = "zergling" ++ integer_to_list(D),
 	Vars = [{inst,[
 				{name,Name},
 				{memory,Memory},
 				{ipaddr,IpAddr}
-			]}],
+			]}]
+				++ OtherVars,
 	zergling_config_dtl:render(Vars).
-
-do_destroy(Conn, Name) ->
-	{ok,[Domain]} = verx:domain_lookup_by_name(Conn, [Name]),
-    verx:domain_destroy(Conn, [Domain]),
-	verx:domain_undefine(Conn, [Domain]),
-	ok.
 
 do_collect(Conn, St0) ->
 	{ok,[NumDef]} = verx:num_of_defined_domains(Conn),	

@@ -6,11 +6,14 @@ init({tcp,http}, Req, []) ->
 	{ok,Req,[]}.
 
 handle(Req, St) ->
+	TsReqReceived = timestamp(),
+	Vars = [{ts_req_received,TsReqReceived}],
+
 	{RealIP,_} = cowboy_req:header(<<"x-real-ip">>, Req, <<"UNKNOWN">>),
 	io:format("~nnew request from ~s~n", [RealIP]),
 
 	io:format("spawning a new instance...~n", []),
-	case spawner:create() of
+	case spawner:create(Vars) of
 	{ok,{Name,Addr}} ->
 		io:format("instance '~s' spawned~n", [Name]),
 
@@ -37,6 +40,10 @@ error_page(Error) ->
 	Vars = [{error,io_lib:format("~p~n", [Error])},
 			{max_inst,spawner:info(max_inst)}],
 	error_dtl:render(Vars).
+
+timestamp() ->
+	{Mega,Secs,Micro} = now(),
+	Mega *1000000.0 + Secs + Micro / 1000000.0.
 
 %%EOF
 
