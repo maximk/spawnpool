@@ -1,14 +1,11 @@
 <html>
 <body>
 
-<p>Error occured while spawning a new instance:</p>
+<h3>Over capacity</h3>
 
-<pre>
-{{ error }}
-</pre>
-
-<p>The service is limited to {{ max_inst }} instances max. You may try again
-later.</p>
+<p>The demo is limited to 16 concurrent instances and 2 libvirt connections. Due
+to these limitations we were unable to spawn a new instance to service your
+request. Please try again later.</p>
 
 </body>
 </html>

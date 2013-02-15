@@ -16,9 +16,7 @@ handle(Req, St) ->
 
 	io:format("spawning a new instance...~n", []),
 	case spawner:create(OtherVars) of
-	{ok,{Name,Addr}} ->
-		io:format("instance '~s' spawned~n", [Name]),
-
+	{ok,{_Name,Addr}} ->
 		{Path,_} = cowboy_req:path(Req),
 		{A,B,C,D} = Addr,
 		RedirectTo = io_lib:format("/internal_redirect/~w.~w.~w.~w/8000~s",
@@ -41,8 +39,7 @@ terminate(_What, _Req, _St) ->
 %%------------------------------------------------------------------------------
 
 error_page(Error) ->
-	Vars = [{error,io_lib:format("~p~n", [Error])},
-			{max_inst,spawner:info(max_inst)}],
+	Vars = [{error,io_lib:format("~p~n", [Error])}],
 	error_dtl:render(Vars).
 
 timestamp() ->
@@ -50,4 +47,3 @@ timestamp() ->
 	Mega *1000000.0 + Secs + Micro / 1000000.0.
 
 %%EOF
-

@@ -59,7 +59,7 @@ handle_cast({begin_collection,ReplyTo}, Ref =St) ->
 		{ok,[Domain]} = verx:domain_lookup_by_name(Ref, [Id]),
 		%X = verx:domain_get_cpu_stats(Ref, [Name]),
 		%io:format("CPU stats = ~p~n",[X]),
-		io:format("gc: undefine domian ~p~n", [Domain]),
+		%io:format("gc: undefine domian ~p~n", [Domain]),
 		verx:domain_undefine(Ref, [Domain]),
 		ReplyTo ! {shutoff,Domain}
 	end, Shutoff),

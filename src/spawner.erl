@@ -5,8 +5,8 @@
 -define(DEF_DOM0_HOST, "192.168.0.1").
 
 -define(DEF_ADDR_BASE, {192,168,0,100}).
--define(DEF_NUM_ADDRS, 100).
--define(DEF_NUM_CONNS, 4).
+-define(DEF_NUM_ADDRS, 16).
+-define(DEF_NUM_CONNS, 1).
 
 -define(GC_INTERVAL, 5000).
 
@@ -117,14 +117,29 @@ handle_call({create,Conf}, From, #st{avail_conns =[Conn|AC],
 
 handle_cast({ready,{A,B,C,D} =Addr}, #st{pending =Pend,running =Run} =St) ->
 	io:format("zergling at ~w.~w.~w.~w reports on duty~n", [A,B,C,D]),
-	{value,{_,From,Name},Pend1} = lists:keytake(Addr, 1, Pend),
-	gen_server:reply(From, {ok,{Name,Addr}}),
-    {noreply,St#st{pending =Pend1,running =[{Name,Addr}|Run]}}.
+	case lists:keytake(Addr, 1, Pend) of
+	{value,{_,From},Pend1} ->
+		%% name is not known yet
+		{noreply,St#st{pending =[{Addr,From,ready}|Pend1]}};
+	{value,{_,From,Name},Pend1} ->
+		gen_server:reply(From, {ok,{Name,Addr}}),
+		{noreply,St#st{pending =Pend1,running =[{Name,Addr}|Run]}}
+	end.
 
-handle_info({created,Conn,Addr,{Name,_Uuid,_Rank}}, #st{avail_conns =AC,pending =Pend} =St) ->
-	{value,{_,From},Pend1} = lists:keytake(Addr, 1, Pend),
-	{noreply,St#st{avail_conns =AC ++ [Conn],	%% round bobbin
-					pending =[{Addr,From,Name}|Pend1]}};
+handle_info({created,Conn,Addr,{Name,_Uuid,_Rank}}, #st{avail_conns =AC,
+														pending =Pend,
+														running =Run} =St) ->
+	case lists:keytake(Addr, 1, Pend) of
+	{value,{_,From,ready},Pend1} ->
+		%% ready message already received
+		gen_server:reply(From, {ok,{Name,Addr}}),
+		{noreply,St#st{avail_conns =AC ++ [Conn],
+					   pending =Pend1,
+					   running =[{Name,Addr}|Run]}};
+	{value,{_,From},Pend1} ->
+		{noreply,St#st{avail_conns =AC ++ [Conn],
+					   pending =[{Addr,From,Name}|Pend1]}}
+	end;
 
 handle_info(collect, #st{gc_busy =true} =St) ->
 	%% already under way - ignore
