@@ -2,8 +2,8 @@
 # The spawn pool for Zerg demo
 
 This application is an integral part of Zerg demo. It gets initial connection
-from nginx, spawn a new 'zergling' instance (see
-https://github.com/maximk/zergling) and instructs nginx to proxy the client
+from nginx, spawns a new 'zergling' instance (see
+https://github.com/maximk/zergling), and instructs nginx to proxy the client
 connection to the newly spawned instance.
 
 # How to setup nginx
