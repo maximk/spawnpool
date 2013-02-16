@@ -45,18 +45,14 @@ nginx configuration file must have a block similar to this:
 
 The application recorgizes the following command-line flags:
 
-dom0-host
-: the address of the Dom0 running libvirtd. Defaults to "192.168.0.1".
+* _-dom0-host_ the address of the Dom0 running libvirtd. Defaults to "192.168.0.1".
 
-addr-base
-: the beginning of the address pool to assign to instances. Defaults to
+* _-addr-base_ the beginning of the address pool to assign to instances. Defaults to
  "192.168.0.100".
 
-num-addrs
-: the maximum number of concurrent instances to spawn (16).
+* _-num-addrs_ the maximum number of concurrent instances to spawn (16).
 
-num-conns
-: the number of libvirtd connections to use (1).
+* _-num-conns_ the number of libvirtd connections to use (1).
 
 Beware that libvirtd serialises all request. Thus have more than one connection
 open may not be worthwhile.
