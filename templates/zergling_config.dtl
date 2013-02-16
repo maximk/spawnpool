@@ -7,7 +7,7 @@
   <os>
     <type>linux</type>
     <kernel>/root/images/zergling.img</kernel>
-	<cmdline>-ts_req_received {{ ts_req_received }} -ipaddr {{ inst.ipaddr }} -netmask 255.255.255.0 -gateway 192.168.0.1 -notify 192.168.0.2:9009 -root /erlang -pz /zergling/ebin -pz /zergling/deps/cowboy/ebin -pz /zergling/deps/ranch/ebin -pz /zergling/deps/erlydtl/ebin -home /zergling -s zergling_app</cmdline>
+	<cmdline>-ipaddr {{ inst.ipaddr }} -netmask 255.255.255.0 -gateway 192.168.0.1 -notify 192.168.0.2:9009 -root /erlang -pz /zergling/ebin -pz /zergling/deps/cowboy/ebin -pz /zergling/deps/ranch/ebin -pz /zergling/deps/erlydtl/ebin -home /zergling -s zergling_app -ts_req_received {{ ts_req_received }} -shutdown_after 15</cmdline>
   </os>
   <devices>
     <interface type='ethernet'>
