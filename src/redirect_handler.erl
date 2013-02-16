@@ -7,16 +7,16 @@ init({tcp,http}, Req, []) ->
 
 handle(Req, St) ->
 	TsReqReceived = timestamp(),
-	Vars = [{ts_req_received,TsReqReceived}],
 
 	{RealIP,_} = cowboy_req:header(<<"x-real-ip">>, Req, <<"UNKNOWN">>),
 	io:format("~nnew request from ~s~n", [RealIP]),
 
-	io:format("spawning a new instance...~n", []),
-	case spawner:create(Vars) of
-	{ok,{Name,Addr}} ->
-		io:format("instance '~s' spawned~n", [Name]),
+	%% passed on to the new instance
+	OtherVars = [{ts_req_received,TsReqReceived}],
 
+	io:format("spawning a new instance...~n", []),
+	case spawner:create(OtherVars) of
+	{ok,{_Name,Addr}} ->
 		{Path,_} = cowboy_req:path(Req),
 		{A,B,C,D} = Addr,
 		RedirectTo = io_lib:format("/internal_redirect/~w.~w.~w.~w/8000~s",
@@ -36,9 +36,10 @@ handle(Req, St) ->
 terminate(_What, _Req, _St) ->
 	ok.
 
+%%------------------------------------------------------------------------------
+
 error_page(Error) ->
-	Vars = [{error,io_lib:format("~p~n", [Error])},
-			{max_inst,spawner:info(max_inst)}],
+	Vars = [{error,io_lib:format("~p~n", [Error])}],
 	error_dtl:render(Vars).
 
 timestamp() ->
@@ -46,4 +47,3 @@ timestamp() ->
 	Mega *1000000.0 + Secs + Micro / 1000000.0.
 
 %%EOF
-
