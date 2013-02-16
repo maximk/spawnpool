@@ -54,6 +54,6 @@ The application recorgizes the following command-line flags:
 
 * _-num-conns_ the number of libvirtd connections to use (1).
 
-Beware that libvirtd serialises all request. Thus have more than one connection
-open may not be worthwhile.
+Beware that libvirtd serialises all requests. Thus more than one open connection
+may not add much.
 
