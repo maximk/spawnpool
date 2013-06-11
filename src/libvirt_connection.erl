@@ -56,12 +56,22 @@ handle_cast({begin_collection,ReplyTo}, Ref =St) ->
 	{ok,[NumDef]} = verx:num_of_defined_domains(Ref),	
 	{ok,[Shutoff]} = verx:list_defined_domains(Ref, [NumDef]),
 	lists:foreach(fun(Id) ->
-		{ok,[Domain]} = verx:domain_lookup_by_name(Ref, [Id]),
-		%X = verx:domain_get_cpu_stats(Ref, [Name]),
-		%io:format("CPU stats = ~p~n",[X]),
-		%io:format("gc: undefine domian ~p~n", [Domain]),
-		verx:domain_undefine(Ref, [Domain]),
-		ReplyTo ! {shutoff,Domain}
+		case verx:domain_lookup_by_name(Ref, [Id]) of
+		{ok,[Domain]} ->
+			%X = verx:domain_get_cpu_stats(Ref, [Name]),
+			%io:format("CPU stats = ~p~n",[X]),
+			%io:format("gc: undefine domian ~p~n", [Domain]),
+
+			case Domain of
+			{<<"zergling",_/binary>>,_,_} ->
+				verx:domain_undefine(Ref, [Domain]),
+				ReplyTo ! {shutoff,Domain};
+			_ ->
+				ignore
+			end;
+		{error,_} ->
+			ok %% already collected
+		end
 	end, Shutoff),
 	ReplyTo ! {collected,self()},
 	{noreply,St}.

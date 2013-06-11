@@ -157,10 +157,15 @@ handle_info(collect, #st{avail_conns =[Conn|Avail]} =St) ->
     {noreply,St#st{avail_conns =Avail,gc_busy =true}};
 
 handle_info({shutoff,{Name,_,_}}, #st{avail_addrs =AA,running =Run} =St) ->
-	{value,{_,Addr},Run1} = lists:keytake(Name, 1, Run),
-	{A,B,C,D} = Addr,
-	io:format("~s shuts off, reuse ~w.~w.~w.~w~n", [Name,A,B,C,D]),
-	{noreply,St#st{avail_addrs =[Addr|AA],running =Run1}};
+	case lists:keytake(Name, 1, Run) of
+	{value,{_,Addr},Run1} ->
+		{A,B,C,D} = Addr,
+		io:format("~s shuts off, reuse ~w.~w.~w.~w~n", [Name,A,B,C,D]),
+		{noreply,St#st{avail_addrs =[Addr|AA],running =Run1}};
+	false ->
+		io:format("**** shutoff: ~s unknown~n", [Name]),
+		{noreply,St}
+	end;
 
 handle_info({collected,Conn}, #st{avail_conns =AC} =St) ->
 	{noreply,St#st{avail_conns =[Conn|AC],gc_busy =false}}.
