@@ -45,15 +45,6 @@ nginx configuration file must have a block similar to this:
 
 The application recorgizes the following command-line flags:
 
-* _-dom0-host_ the address of the Dom0 running libvirtd. Defaults to "192.168.0.1".
-
-* _-addr-base_ the beginning of the address pool to assign to instances. Defaults to
- "192.168.0.100".
-
-* _-num-addrs_ the maximum number of concurrent instances to spawn (16).
-
-* _-num-conns_ the number of libvirtd connections to use (1).
-
-Beware that libvirtd serialises all requests. Thus more than one open connection
-may not add much.
+* _-gator_ the IP address (and port) of the Dom0 running gatord. Defaults to
+* "127.0.0.1:4287".
 

@@ -24,6 +24,5 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-	Spawner = ?CHILD(spawner, worker),
-    {ok, { {one_for_one, 5, 10}, [Spawner]} }.
+    {ok, { {one_for_one, 5, 10}, []} }.
 

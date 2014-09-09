@@ -26,7 +26,7 @@ start(_StartType, _StartArgs) ->
 	]),
 
 	{ok,_} = cowboy:start_http(spawner, 100,
-		[{port,9001}],
+		[{port,8900}],
 		[{env,[{dispatch,Dispatch}]}]),
 
 	%% a listener to collect 'ready' messages from zerglings
@@ -38,7 +38,7 @@ start(_StartType, _StartArgs) ->
 	]),
 
 	{ok,_} = cowboy:start_http(notifier, 100,
-		[{port,9009}],
+		[{port,8909}],
 		[{env,[{dispatch,Notify}]}]),
 
     spawnpool_sup:start_link().
