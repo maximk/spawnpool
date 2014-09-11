@@ -7,8 +7,9 @@ init({tcp,http}, Req, []) ->
 
 handle(Req, St) ->
 	{<<"POST">>,_} = cowboy_req:method(Req),
-	{Addr,_} = cowboy_req:peer_addr(Req),
-	gen_server:cast(spawner, {ready,Addr}),
+	{[DomName],_} = cowboy_req:path_info(Req),
+	{{IpAddr,_Port},_} = cowboy_req:peer(Req),
+	gen_server:cast(nominator, {ready,DomName,IpAddr}),
 	{ok,Req,St}.
 
 terminate(_What, _Req, _St) ->

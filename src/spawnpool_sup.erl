@@ -24,5 +24,7 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
+	Nominator = ?CHILD(nominator, worker),
+    {ok, { {one_for_one, 5, 10}, [Nominator]} }.
 
+%%EOF

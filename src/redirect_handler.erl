@@ -2,27 +2,36 @@
 -export([init/3]).
 -export([handle/2,terminate/3]).
 
+-define(ZERGLING_IMAGE, <<"/home/mk/zergling/vmling">>).
+-define(BRIDGE, <<"xenbr0">>).
+-define(EXTRA, "-dhcp -notify 10.0.0.1:8909 -shutdown_after 15000 -home /zergling "
+			   "-pz /zergling/ebin "
+			   "-pz /zergling/deps/cowboy/ebin "
+			   "-pz /zergling/deps/cowlib/ebin "
+			   "-pz /zergling/deps/ranch/ebin "
+			   "-pz /zergling/deps/erlydtl/ebin "
+			   "-s zergling_app").
+
 init({tcp,http}, Req, []) ->
 	{ok,Req,[]}.
 
 handle(Req, St) ->
 	TsReqReceived = timestamp(),
+	DomName = nominator:fresh(),
+	{RealIp,_} = cowboy_req:header(<<"x-real-ip">>, Req, undefined),
+	io:format("demo:~s:~s:", [real_host_name(RealIp),DomName]),
 
-	{RealIP,_} = cowboy_req:header(<<"x-real-ip">>, Req, <<"UNKNOWN">>),
-	io:format("~nnew request from ~s~n", [RealIP]),
-
-	%% passed on to the new instance
-	OtherVars = [{ts_req_received,TsReqReceived}],
-
-	io:format("spawning a new instance...~n", []),
-	case spawner:create(OtherVars) of
-	{ok,{_Name,Addr}} ->
+	Extra = ?EXTRA ++ io_lib:format(" -ts_req_received ~w", [TsReqReceived]),
+	DomOpts = [{extra,list_to_binary(Extra)},
+			   {memory,32},
+			   {bridge,?BRIDGE}],
+	case egator:create(DomName, ?ZERGLING_IMAGE, DomOpts, []) of
+	ok ->
+		{ok,{A,B,C,D}} = nominator:wait_until_ready(DomName),
+		io:format("~w.~w.~w.~w\n", [A,B,C,D]),
 		{Path,_} = cowboy_req:path(Req),
-		{A,B,C,D} = Addr,
 		RedirectTo = io_lib:format("/internal_redirect/~w.~w.~w.~w/8000~s",
 										[A,B,C,D,Path]),
-		io:format("redirect to ~s~n", [RedirectTo]),
-
 		Headers = [{<<"X-Accel-Redirect">>,list_to_binary(RedirectTo)}],
 		{ok,Reply} = cowboy_req:reply(200, Headers, Req),
 		{ok,Reply,St};
@@ -37,6 +46,13 @@ terminate(_What, _Req, _St) ->
 	ok.
 
 %%------------------------------------------------------------------------------
+
+real_host_name(undefined) -> <<"not-set">>;
+real_host_name(IpAddr) when is_binary(IpAddr) ->
+	case inet:gethostbyaddr(binary_to_list(IpAddr)) of
+		{error,_}						 -> IpAddr;
+		{ok,{hostent,undefined,_,_,_,_}} -> IpAddr;
+		{ok,{hostent,HostName,_,_,_,_}}  -> list_to_binary(HostName) end.
 
 error_page(Error) ->
 	Vars = [{error,io_lib:format("~p~n", [Error])}],
