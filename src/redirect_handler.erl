@@ -4,24 +4,29 @@
 
 -define(ZERGLING_IMAGE, <<"/home/mk/zergling/vmling">>).
 -define(BRIDGE, <<"xenbr0">>).
--define(EXTRA, "-dhcp -notify 10.0.0.1:8909 -shutdown_after 15000 -home /zergling "
-			   "-pz /zergling/ebin "
-			   "-pz /zergling/deps/cowboy/ebin "
-			   "-pz /zergling/deps/cowlib/ebin "
-			   "-pz /zergling/deps/ranch/ebin "
-			   "-pz /zergling/deps/erlydtl/ebin "
-			   "-s zergling_app").
+-define(BASIC_EXTRA,
+			"-notify 10.0.0.1:8909 -shutdown_after 15000 "
+			" -home /zergling "
+			"-pz /zergling/ebin "
+			"-pz /zergling/deps/cowboy/ebin "
+			"-pz /zergling/deps/cowlib/ebin "
+			"-pz /zergling/deps/ranch/ebin "
+			"-pz /zergling/deps/erlydtl/ebin "
+			"-s zergling_app").
 
 init({tcp,http}, Req, []) ->
 	{ok,Req,[]}.
 
 handle(Req, St) ->
 	TsReqReceived = timestamp(),
-	DomName = nominator:fresh(),
+	{ok,DomName,{A0,B0,C0,D0}} = nominator:fresh(),
 	{RealIp,_} = cowboy_req:header(<<"x-real-ip">>, Req, undefined),
 	io:format("demo:~s:~s:", [real_host_name(RealIp),DomName]),
 
-	Extra = ?EXTRA ++ io_lib:format(" -ts_req_received ~w", [TsReqReceived]),
+	Extra = io_lib:format("-ipaddr ~w.~w.~w.~w "
+						  "-netmask 255.0.0.0 "
+						  "-gateway 10.0.0.1 "
+						  "~s -ts_req_received ~w", [A0,B0,C0,D0,?BASIC_EXTRA,TsReqReceived]),
 	DomOpts = [{extra,list_to_binary(Extra)},
 			   {memory,32},
 			   {bridge,?BRIDGE}],

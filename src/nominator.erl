@@ -11,8 +11,7 @@
 -export([fresh/0]).
 -export([wait_until_ready/1]).
 
--record(st, {next =0,
-			 taken =[],
+-record(st, {taken =[],
 			 pending =[],
 			 ready = []}).
 
@@ -41,14 +40,15 @@ wait_until_ready(DomName) ->
 %% ------------------------------------------------------------------
 
 init(_Args) ->
-	{ok,Domains} = egator:list(<<"zergling">>, []),
-	Taken = integers([string:substr(binary_to_list(D), 9) || {D,_} <- Domains]),
+	random:seed(now()),
+	{ok,Domains} = egator:list([]),
+	Taken = domain_addresses([D || {D,_} <- Domains]),
     {ok,#st{taken =Taken}}.
 
-handle_call(fresh, _From, #st{next =Next,taken =Taken} =St) ->
-	Next1 = next_free(Next +1, Taken),
-	DomName = list_to_binary(io_lib:format("zergling~w", [Next1])),
-    {reply,DomName,St#st{next =Next1}};
+handle_call(fresh, _From, #st{taken =Taken} =St) ->
+	{ok,IpAddr,Taken1} = next_free(Taken),
+	DomName = encode_name("zergling", IpAddr),
+    {reply,{ok,DomName,IpAddr},St#st{taken =Taken1}};
 
 handle_call({wait_until_ready,DomName}, From, #st{pending =Pending,ready =Ready} =St) ->
 	case lists:keytake(DomName, 1, Ready) of
@@ -80,18 +80,29 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-integers(Ss) -> integers(Ss, []).
+domain_addresses(Domains) -> domain_addresses(Domains, []).
 
-integers([], Acc) -> Acc;
-integers([S|Ss], Acc) ->
-	try I = list_to_integer(S),
-		integers(Ss, [I|Acc])
-	catch _:_ ->
-		integers(Ss, Acc) end.
+domain_addresses([], Acc) -> Acc;
+domain_addresses([Dom|Domains], Acc) ->
+	case re:run(Dom, "[a-z]_([0-9]+)_([0-9]+)_([0-9]+)",
+						[{capture,all_but_first,list}]) of
+	{match,[B,C,D]} ->
+		IpAddr = {10,list_to_integer(B),list_to_integer(C),list_to_integer(D)},
+		domain_addresses(Domains, [IpAddr|Acc]);
+	_ ->
+		domain_addresses(Domains, Acc)
+	end.
 
-next_free(Next, Taken) ->
-	case lists:member(Next, Taken) of
-		true  -> next_free(Next +1, Taken);
-		false -> Next end.
+next_free(Taken) ->
+	B = random:uniform(256) -1,
+	C = random:uniform(256) -1,
+	D = random:uniform(256) -1,
+	IpAddr = {10,B,C,D},
+	case lists:member(IpAddr, Taken) of
+		true  -> next_free(Taken);
+		false -> {ok,IpAddr,[IpAddr|Taken]} end.
+
+encode_name(Prefix, {10,B,C,D}) ->
+	list_to_binary(io_lib:format("~s_~w_~w_~w", [Prefix,B,C,D])).
 
 %%EOF
